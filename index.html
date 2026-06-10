@@ -192,6 +192,22 @@
         .info-item:hover { transform: translateX(10px); }
         .info-item i { width: 45px; height: 45px; background: rgba(245,176,66,0.15); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; color: #F5B042; }
         .contact-form input, .contact-form select, .contact-form textarea { width: 100%; padding: 14px; margin-bottom: 18px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; color: #fff; font-family: inherit; }
+        
+        /* Error styling */
+        .contact-form input.error, .contact-form select.error, .contact-form textarea.error {
+            border-color: #ff4444;
+            box-shadow: 0 0 8px rgba(255,68,68,0.3);
+        }
+        .error-message {
+            color: #ff4444;
+            font-size: 0.75rem;
+            margin-top: -12px;
+            margin-bottom: 12px;
+            display: none;
+        }
+        .error-message.show {
+            display: block;
+        }
 
         .popup-notification {
             position: fixed;
@@ -346,7 +362,7 @@
     <section class="properties-grid"><div class="container"><div class="property-cards" id="propertyContainer"></div></div></section>
 </div>
 
-<!-- LEADERSHIP PAGE - Rahul & Om ke ALAG NUMBERS -->
+<!-- LEADERSHIP PAGE -->
 <div id="leadershipPage" class="page">
     <section class="page-header"><div class="container"><h1>Meet The <span class="gold">Visionaries</span></h1><p>The masterminds behind AD Properties' success story</p></div></section>
     <section class="leadership"><div class="container">
@@ -357,7 +373,7 @@
     </div></section>
 </div>
 
-<!-- CONTACT PAGE - Email Button -->
+<!-- CONTACT PAGE with Validation -->
 <div id="contactPage" class="page">
     <section class="page-header"><div class="container"><h1>Let's <span class="gold">Connect</span></h1><p>Your dream property is just a message away</p></div></section>
     <section class="contact-page"><div class="container"><div class="contact-grid">
@@ -368,20 +384,33 @@
             <div class="info-item"><i class="fas fa-map-marker-alt"></i><div><strong>Visit Us</strong><br>Zirakpur, Punjab</div></div>
             <div class="quick-contact"><button class="btn-gold" onclick="window.location.href='tel:+917837629125'"><i class="fas fa-phone"></i> Call Now</button><button class="btn-outline" onclick="window.open('https://wa.me/917837629125?text=Hi%20Team%20AD','_blank')"><i class="fab fa-whatsapp"></i> WhatsApp</button></div>
         </div>
-        <div class="contact-form"><h2>Send a Message</h2><form id="enquiryForm">
-            <input type="text" id="userName" placeholder="Your Name" required>
-            <input type="email" id="userEmail" placeholder="Email Address" required>
-            <input type="tel" id="userPhone" placeholder="Phone Number" required>
-            <select id="userInterest" required>
-                <option value="">I'm interested in...</option>
-                <option>Residential Property</option>
-                <option>Commercial Property</option>
-                <option>Agricultural Land</option>
-                <option>Investment Consultation</option>
-            </select>
-            <textarea id="userMessage" rows="4" placeholder="Your Message"></textarea>
-            <button type="submit" class="btn-gold" style="width:100%"><i class="fas fa-paper-plane"></i> Send Enquiry</button>
-        </form></div>
+        <div class="contact-form">
+            <h2>Send a Message</h2>
+            <form id="enquiryForm">
+                <input type="text" id="userName" placeholder="Full Name *" required>
+                <div class="error-message" id="nameError">❌ Name must be at least 2 letters (A-Z only)</div>
+                
+                <input type="email" id="userEmail" placeholder="Email Address *" required>
+                <div class="error-message" id="emailError">❌ Enter a valid email (e.g., name@domain.com)</div>
+                
+                <input type="tel" id="userPhone" placeholder="Phone Number (10 digits) *" required>
+                <div class="error-message" id="phoneError">❌ Phone number must be exactly 10 digits</div>
+                
+                <select id="userInterest" required>
+                    <option value="">I'm interested in... *</option>
+                    <option>Residential Property</option>
+                    <option>Commercial Property</option>
+                    <option>Agricultural Land</option>
+                    <option>Investment Consultation</option>
+                </select>
+                <div class="error-message" id="interestError">❌ Please select an option</div>
+                
+                <textarea id="userMessage" rows="4" placeholder="Your Message *"></textarea>
+                <div class="error-message" id="messageError">❌ Please write your message</div>
+                
+                <button type="submit" class="btn-gold" style="width:100%"><i class="fas fa-paper-plane"></i> Send Enquiry</button>
+            </form>
+        </div>
     </div></div></section>
 </div>
 
@@ -446,10 +475,69 @@
         }
     });
 
-    // Contact Form Submit
+    // ========== VALIDATION FUNCTIONS ==========
+    function validateName(name) {
+        const nameRegex = /^[A-Za-z]{2,}$/;
+        return nameRegex.test(name.trim());
+    }
+
+    function validateEmail(email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email.trim());
+    }
+
+    function validatePhone(phone) {
+        const phoneRegex = /^\d{10}$/;
+        return phoneRegex.test(phone.trim());
+    }
+
+    function validateMessage(message) {
+        return message.trim().length > 0;
+    }
+
+    function validateInterest(interest) {
+        return interest !== null && interest !== "" && interest !== "I'm interested in...";
+    }
+
+    function showFieldError(fieldId, errorId, isValid, errorMessage) {
+        const field = document.getElementById(fieldId);
+        const error = document.getElementById(errorId);
+        if (!isValid) {
+            field.classList.add('error');
+            error.classList.add('show');
+        } else {
+            field.classList.remove('error');
+            error.classList.remove('show');
+        }
+    }
+
+    // ========== CONTACT FORM SUBMIT WITH VALIDATION ==========
     const enquiryForm = document.getElementById('enquiryForm');
+    
     enquiryForm.addEventListener('submit', function(e) {
         e.preventDefault();
+        
+        const name = document.getElementById('userName').value;
+        const email = document.getElementById('userEmail').value;
+        const phone = document.getElementById('userPhone').value;
+        const interest = document.getElementById('userInterest').value;
+        const message = document.getElementById('userMessage').value;
+        
+        const isNameValid = validateName(name);
+        const isEmailValid = validateEmail(email);
+        const isPhoneValid = validatePhone(phone);
+        const isInterestValid = validateInterest(interest);
+        const isMessageValid = validateMessage(message);
+        
+        showFieldError('userName', 'nameError', isNameValid, '');
+        showFieldError('userEmail', 'emailError', isEmailValid, '');
+        showFieldError('userPhone', 'phoneError', isPhoneValid, '');
+        showFieldError('userInterest', 'interestError', isInterestValid, '');
+        showFieldError('userMessage', 'messageError', isMessageValid, '');
+        
+        if (!isNameValid || !isEmailValid || !isPhoneValid || !isInterestValid || !isMessageValid) {
+            return;
+        }
         
         const submitBtn = enquiryForm.querySelector('button[type="submit"]');
         const originalText = submitBtn.innerHTML;
@@ -457,12 +545,13 @@
         submitBtn.disabled = true;
         
         const templateParams = {
-            name: document.getElementById('userName').value,
-            email: document.getElementById('userEmail').value,
-            phone: document.getElementById('userPhone').value,
-            interest: document.getElementById('userInterest').value,
-            message: document.getElementById('userMessage').value || 'No additional message',
-            website: 'AD Properties Official Website'
+            name: name,
+            email: email,
+            phone: phone,
+            interest: interest,
+            message: message,
+            website: 'AD Properties Official Website',
+            time: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })
         };
         
         emailjs.send('service_9sut952', 'template_adproperties', templateParams)
@@ -479,6 +568,23 @@
                 submitBtn.innerHTML = originalText;
                 submitBtn.disabled = false;
             });
+    });
+
+    // Real-time validation on input
+    document.getElementById('userName').addEventListener('input', function() {
+        validateName(this.value) ? this.classList.remove('error') : this.classList.add('error');
+    });
+    document.getElementById('userEmail').addEventListener('input', function() {
+        validateEmail(this.value) ? this.classList.remove('error') : this.classList.add('error');
+    });
+    document.getElementById('userPhone').addEventListener('input', function() {
+        validatePhone(this.value) ? this.classList.remove('error') : this.classList.add('error');
+    });
+    document.getElementById('userInterest').addEventListener('change', function() {
+        validateInterest(this.value) ? this.classList.remove('error') : this.classList.add('error');
+    });
+    document.getElementById('userMessage').addEventListener('input', function() {
+        validateMessage(this.value) ? this.classList.remove('error') : this.classList.add('error');
     });
 
     // Properties Data
