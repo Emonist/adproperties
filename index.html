@@ -25,6 +25,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
     
+    <!-- EmailJS SDK -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+    
     <style>
         /* ========== ANTI-THEFT ========== */
         * {
@@ -36,7 +39,6 @@
             user-select: none;
         }
         
-        /* Disable print screen and save shortcuts */
         body {
             -webkit-tap-highlight-color: transparent;
         }
@@ -45,7 +47,6 @@
             pointer-events: none;
         }
         
-        /* ========== BASE STYLES ========== */
         * {
             margin: 0;
             padding: 0;
@@ -88,7 +89,6 @@
             color: #333;
         }
 
-        /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #11161f; }
         ::-webkit-scrollbar-thumb { background: #F5B042; border-radius: 8px; }
@@ -391,6 +391,74 @@
         .contact-form input, .contact-form select, .contact-form textarea { width: 100%; padding: 14px; margin-bottom: 18px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; color: #fff; font-family: inherit; transition: all 0.3s ease; }
         .contact-form input:focus, .contact-form select:focus, .contact-form textarea:focus { outline: none; border-color: #F5B042; box-shadow: 0 0 10px rgba(245,176,66,0.3); transform: scale(1.01); }
 
+        /* Email Button Style */
+        .email-link {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .email-link:hover {
+            color: #F5B042;
+            transform: translateX(5px);
+        }
+
+        /* Popup Notification */
+        .popup-notification {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.8);
+            background: linear-gradient(135deg, #1a1f2e, #0f1119);
+            border: 1px solid rgba(245,176,66,0.5);
+            border-radius: 28px;
+            padding: 35px 45px;
+            text-align: center;
+            z-index: 2000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.5), 0 0 30px rgba(245,176,66,0.2);
+            backdrop-filter: blur(20px);
+        }
+        body.light-mode .popup-notification {
+            background: linear-gradient(135deg, #ffffff, #f0f2f5);
+            color: #1a1f2e;
+        }
+        .popup-notification.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translate(-50%, -50%) scale(1);
+        }
+        .popup-notification i {
+            font-size: 4rem;
+            color: #F5B042;
+            margin-bottom: 15px;
+        }
+        .popup-notification h3 {
+            font-size: 1.8rem;
+            margin-bottom: 10px;
+        }
+        .popup-notification p {
+            color: #aaa;
+            margin-bottom: 20px;
+        }
+        .popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(4px);
+            z-index: 1999;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+        .popup-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
         /* CTA & Footer */
         .cta-card { background: rgba(0,0,0,0.4); padding: 55px 40px; border-radius: 70px; text-align: center; transition: all 0.3s ease; }
         .cta-card:hover { transform: scale(1.01); background: rgba(0,0,0,0.5); box-shadow: 0 0 30px rgba(245,176,66,0.1); }
@@ -403,7 +471,6 @@
         .social i:hover { color: #F5B042; transform: translateY(-3px) rotate(360deg); }
         .footer-bottom { text-align: center; margin-top: 30px; font-size: 0.8rem; color: #666; }
 
-        /* Mobile Responsive */
         @media (max-width: 768px) {
             .nav-links { display: none; width: 100%; }
             .menu-btn { display: block; }
@@ -418,13 +485,23 @@
             .testimonial-card { min-width: 280px; }
             .cta-card { padding: 35px 20px; }
             .cta-card h2 { font-size: 1.5rem; }
+            .popup-notification { padding: 25px 30px; width: 90%; }
+            .popup-notification h3 { font-size: 1.3rem; }
         }
     </style>
 </head>
 <body>
 
-<!-- Particle Background -->
 <div class="particles" id="particles"></div>
+
+<!-- Popup Notification -->
+<div class="popup-overlay" id="popupOverlay"></div>
+<div class="popup-notification" id="popupNotification">
+    <i class="fas fa-check-circle"></i>
+    <h3>✨ Query Sent Successfully!</h3>
+    <p>Thank you for reaching out to AD Properties.<br>Our team will contact you within <strong>15 minutes</strong> on WhatsApp.</p>
+    <button class="btn-gold" onclick="closePopup()">Got it! 👍</button>
+</div>
 
 <nav class="navbar">
     <div class="nav-container">
@@ -519,8 +596,8 @@
     <section class="leadership"><div class="container">
         <div class="leader-card"><div class="leader-img"><i class="fas fa-user-tie"></i></div><div class="leader-info"><h2>Ashwani <span class="gold">✦ Founder & CEO</span></h2><p>12+ years experience, 500+ deals closed, ₹250Cr+ deal volume. Visionary leader transforming real estate landscape.</p><div class="leader-stats"><div><strong>500+</strong> Deals</div><div><strong>₹250Cr+</strong> Volume</div><div><strong>12+</strong> Years</div></div><button class="btn-outline small" onclick="window.open('https://wa.me/917837629125?text=Hi%20Ashwani','_blank')"><i class="fab fa-whatsapp"></i> Connect</button></div></div>
         <div class="leader-card"><div class="leader-img"><i class="fas fa-gem"></i></div><div class="leader-info"><h2>Shelly <span class="gold">✦ Co-Founder & Strategy Head</span></h2><p>Innovative marketing strategist, 42% avg ROI for clients, ₹100Cr+ portfolio managed. The creative genius behind our brand.</p><div class="leader-stats"><div><strong>₹100Cr+</strong> Portfolio</div><div><strong>42%</strong> Avg ROI</div><div><strong>8+</strong> Years</div></div><button class="btn-outline small" onclick="window.open('https://wa.me/917837629125?text=Hi%20Shelly','_blank')"><i class="fab fa-whatsapp"></i> Investment Query</button></div></div>
-        <div class="leader-card"><div class="leader-img"><i class="fas fa-chart-line"></i></div><div class="leader-info"><h2>Rahul <span class="gold">✦ Managing Partner, Investments</span></h2><p>Financial modeling expert, 150+ NRI clients, 100% legal compliance. Numbers genius who maximizes your returns.</p><div class="leader-stats"><div><strong>150+</strong> NRI Clients</div><div><strong>35%</strong> Better Pricing</div><div><strong>100%</strong> Compliance</div></div><button class="btn-outline small" onclick="window.open('https://wa.me/9896221319?text=Hi%20Rahul','_blank')"><i class="fab fa-whatsapp"></i> Portfolio Discussion</button></div></div>
-        <div class="leader-card highlight"><div class="leader-img"><i class="fas fa-user-check"></i></div><div class="leader-info"><h2>Om <span class="gold">✦ Operations & Client Experience Manager</span></h2><p>500+ happy clients, 100% satisfaction, same-day resolution guarantee. The backbone of our seamless client experience.</p><div class="leader-stats"><div><strong>500+</strong> Happy Clients</div><div><strong>100%</strong> Satisfaction</div><div><strong>Same Day</strong> Resolution</div></div><button class="btn-outline small" onclick="window.open('https://wa.me/7002497893?text=Hi%20Om','_blank')"><i class="fab fa-whatsapp"></i> Client Support</button></div></div>
+        <div class="leader-card"><div class="leader-img"><i class="fas fa-chart-line"></i></div><div class="leader-info"><h2>Rahul <span class="gold">✦ Managing Partner, Investments</span></h2><p>Financial modeling expert, 150+ NRI clients, 100% legal compliance. Numbers genius who maximizes your returns.</p><div class="leader-stats"><div><strong>150+</strong> NRI Clients</div><div><strong>35%</strong> Better Pricing</div><div><strong>100%</strong> Compliance</div></div><button class="btn-outline small" onclick="window.open('https://wa.me/917837629125?text=Hi%20Rahul','_blank')"><i class="fab fa-whatsapp"></i> Portfolio Discussion</button></div></div>
+        <div class="leader-card highlight"><div class="leader-img"><i class="fas fa-user-check"></i></div><div class="leader-info"><h2>Om <span class="gold">✦ Operations & Client Experience Manager</span></h2><p>500+ happy clients, 100% satisfaction, same-day resolution guarantee. The backbone of our seamless client experience.</p><div class="leader-stats"><div><strong>500+</strong> Happy Clients</div><div><strong>100%</strong> Satisfaction</div><div><strong>Same Day</strong> Resolution</div></div><button class="btn-outline small" onclick="window.open('https://wa.me/917837629125?text=Hi%20Om','_blank')"><i class="fab fa-whatsapp"></i> Client Support</button></div></div>
     </div></section>
 </div>
 
@@ -531,11 +608,11 @@
         <div class="contact-info"><h2>Get In Touch</h2>
             <div class="info-item"><i class="fas fa-phone-alt"></i><div><strong>Call Us</strong><br>+91 78376 29125</div></div>
             <div class="info-item"><i class="fab fa-whatsapp"></i><div><strong>WhatsApp</strong><br>+91 78376 29125</div></div>
-            <div class="info-item"><i class="fas fa-envelope"></i><div><strong>Email</strong><br>hello@adproperties.in</div></div>
-            <div class="info-item"><i class="fas fa-map-marker-alt"></i><div><strong>Visit Us</strong><br>DLF Cyber City, Gurgaon<br>Bandra East, Mumbai</div></div>
+            <div class="info-item email-link" onclick="window.location.href='mailto:adproperties11007@gmail.com'"><i class="fas fa-envelope"></i><div><strong>Email Us</strong><br>adproperties11007@gmail.com</div></div>
+            <div class="info-item"><i class="fas fa-map-marker-alt"></i><div><strong>Visit Us</strong><br>Zirakpur, Punjab</div></div>
             <div class="quick-contact"><button class="btn-gold" onclick="window.location.href='tel:+917837629125'"><i class="fas fa-phone"></i> Call Now</button><button class="btn-outline" onclick="window.open('https://wa.me/917837629125?text=Hi%20Team%20AD','_blank')"><i class="fab fa-whatsapp"></i> WhatsApp</button></div>
         </div>
-        <div class="contact-form"><h2>Send a Message</h2><form id="enquiryForm" onsubmit="event.preventDefault(); alert('✅ Thank you! Our team will contact you within 15 minutes on WhatsApp.');"><input type="text" placeholder="Your Name" required><input type="email" placeholder="Email Address" required><input type="tel" placeholder="Phone Number" required><select required><option>I'm interested in...</option><option>Residential Property</option><option>Commercial Property</option><option>Agricultural Land</option><option>Investment Consultation</option></select><textarea rows="4" placeholder="Your Message"></textarea><button type="submit" class="btn-gold" style="width:100%"><i class="fab fa-whatsapp"></i> Send Enquiry</button></form></div>
+        <div class="contact-form"><h2>Send a Message</h2><form id="enquiryForm"><input type="text" id="userName" placeholder="Your Name" required><input type="email" id="userEmail" placeholder="Email Address" required><input type="tel" id="userPhone" placeholder="Phone Number" required><select id="userInterest" required><option value="">I'm interested in...</option><option>Residential Property</option><option>Commercial Property</option><option>Agricultural Land</option><option>Investment Consultation</option></select><textarea id="userMessage" rows="4" placeholder="Your Message"></textarea><button type="submit" class="btn-gold" style="width:100%"><i class="fas fa-paper-plane"></i> Send Enquiry</button></form></div>
     </div></div></section>
 </div>
 
@@ -551,48 +628,26 @@
 
 <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
 <script>
+    // ========== EMAILJS INITIALIZATION ==========
+    (function() {
+        emailjs.init("cxrzrWkbM8L_IeXOR"); // Your Public Key
+    })();
+
     // ========== ANTI THEFT PROTECTION ==========
-    // Disable Right Click
     document.addEventListener('contextmenu', function(e) {
         e.preventDefault();
         return false;
     });
     
-    // Disable F12, Ctrl+Shift+I, Ctrl+U, Ctrl+S, Ctrl+P, etc.
     document.addEventListener('keydown', function(e) {
-        // F12
-        if (e.key === 'F12') {
-            e.preventDefault();
-            return false;
-        }
-        // Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C, Ctrl+U, Ctrl+S
-        if (e.ctrlKey && (e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C'))) {
-            e.preventDefault();
-            return false;
-        }
-        // Ctrl+U (View Source)
-        if (e.ctrlKey && e.key === 'u') {
-            e.preventDefault();
-            return false;
-        }
-        // Ctrl+S (Save)
-        if (e.ctrlKey && e.key === 's') {
-            e.preventDefault();
-            return false;
-        }
-        // Ctrl+P (Print)
-        if (e.ctrlKey && e.key === 'p') {
-            e.preventDefault();
-            return false;
-        }
-        // Ctrl+Shift+S (Save as)
-        if (e.ctrlKey && e.shiftKey && e.key === 'S') {
-            e.preventDefault();
-            return false;
-        }
+        if (e.key === 'F12') { e.preventDefault(); return false; }
+        if (e.ctrlKey && (e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C'))) { e.preventDefault(); return false; }
+        if (e.ctrlKey && e.key === 'u') { e.preventDefault(); return false; }
+        if (e.ctrlKey && e.key === 's') { e.preventDefault(); return false; }
+        if (e.ctrlKey && e.key === 'p') { e.preventDefault(); return false; }
+        if (e.ctrlKey && e.shiftKey && e.key === 'S') { e.preventDefault(); return false; }
     });
     
-    // Disable Print Screen detection (can't fully block but can clear clipboard)
     document.addEventListener('keyup', function(e) {
         if (e.key === 'PrintScreen') {
             navigator.clipboard.writeText('').catch(() => {});
@@ -600,16 +655,25 @@
         }
     });
     
-    // Disable Win+Shift+S (Snipping Tool) - clear clipboard on window blur
     window.addEventListener('blur', function() {
         navigator.clipboard.writeText('').catch(() => {});
     });
     
-    // Disable drag and drop of images
     window.addEventListener('dragstart', function(e) {
         e.preventDefault();
         return false;
     });
+    
+    // ========== POPUP FUNCTIONS ==========
+    function showPopup() {
+        document.getElementById('popupOverlay').classList.add('show');
+        document.getElementById('popupNotification').classList.add('show');
+    }
+    
+    function closePopup() {
+        document.getElementById('popupOverlay').classList.remove('show');
+        document.getElementById('popupNotification').classList.remove('show');
+    }
     
     // ========== PAGE NAVIGATION ==========
     function showPage(pageName) {
@@ -621,11 +685,9 @@
         document.querySelectorAll('.nav-item').forEach(item => {
             item.classList.remove('active');
         });
-        event.target.classList.add('active');
+        if (event && event.target) event.target.classList.add('active');
         
         window.scrollTo({ top: 0, behavior: 'smooth' });
-        
-        // Close mobile menu
         document.getElementById('navLinks').classList.remove('show');
     }
     
@@ -645,6 +707,41 @@
             icon.classList.remove('fa-sun');
             icon.classList.add('fa-moon');
         }
+    });
+    
+    // ========== CONTACT FORM SUBMISSION ==========
+    const enquiryForm = document.getElementById('enquiryForm');
+    enquiryForm.addEventListener('submit', function(event) {
+        event.preventDefault();
+        
+        const submitBtn = enquiryForm.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+        submitBtn.disabled = true;
+        
+        const templateParams = {
+            name: document.getElementById('userName').value,
+            email: document.getElementById('userEmail').value,
+            phone: document.getElementById('userPhone').value,
+            interest: document.getElementById('userInterest').value,
+            message: document.getElementById('userMessage').value || 'No additional message',
+            website: 'AD Properties Official Website'
+        };
+        
+        emailjs.send('service_9sut952', 'template_adproperties', templateParams)
+            .then(function(response) {
+                console.log('Email sent successfully!', response);
+                enquiryForm.reset();
+                showPopup();
+            })
+            .catch(function(error) {
+                console.error('Email failed:', error);
+                alert('⚠️ Something went wrong. Please WhatsApp us directly at +91 78376 29125');
+            })
+            .finally(function() {
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            });
     });
     
     // ========== PROPERTIES DATA ==========
@@ -710,14 +807,12 @@
     }
     createParticles();
     
-    // Initialize AOS
     AOS.init({ duration: 800, once: true });
     
-    // Fix for mobile menu
     window.addEventListener('click', function(e) {
         const navLinks = document.getElementById('navLinks');
         const menuBtn = document.querySelector('.menu-btn');
-        if (!navLinks.contains(e.target) && !menuBtn.contains(e.target) && navLinks.classList.contains('show')) {
+        if (navLinks && menuBtn && !navLinks.contains(e.target) && !menuBtn.contains(e.target) && navLinks.classList.contains('show')) {
             navLinks.classList.remove('show');
         }
     });
