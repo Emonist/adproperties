@@ -193,7 +193,34 @@
         .info-item i { width: 45px; height: 45px; background: rgba(245,176,66,0.15); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; color: #F5B042; }
         .contact-form input, .contact-form select, .contact-form textarea { width: 100%; padding: 14px; margin-bottom: 18px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; color: #fff; font-family: inherit; }
         
-        /* Error styling */
+        /* Message character limit styling - 200 characters TOTAL (including spaces, letters, numbers, symbols) */
+        .message-counter {
+            text-align: right;
+            font-size: 0.75rem;
+            margin-top: -12px;
+            margin-bottom: 18px;
+            color: #aaa;
+            font-weight: 500;
+        }
+        .message-counter .char-count-display {
+            font-weight: 700;
+            font-family: monospace;
+            font-size: 0.85rem;
+        }
+        .message-counter .normal-limit {
+            color: #aaa;
+        }
+        .message-counter .warning-limit {
+            color: #ffaa44;
+        }
+        .message-counter .danger-limit {
+            color: #ff4444;
+            font-weight: bold;
+        }
+        .contact-form textarea {
+            resize: vertical;
+        }
+
         .contact-form input.error, .contact-form select.error, .contact-form textarea.error {
             border-color: #ff4444;
             box-shadow: 0 0 8px rgba(255,68,68,0.3);
@@ -373,7 +400,7 @@
     </div></section>
 </div>
 
-<!-- CONTACT PAGE with Validation -->
+<!-- CONTACT PAGE with 200 CHARACTER LIMIT (including spaces, letters, numbers, symbols) -->
 <div id="contactPage" class="page">
     <section class="page-header"><div class="container"><h1>Let's <span class="gold">Connect</span></h1><p>Your dream property is just a message away</p></div></section>
     <section class="contact-page"><div class="container"><div class="contact-grid">
@@ -405,8 +432,11 @@
                 </select>
                 <div class="error-message" id="interestError">❌ Please select an option</div>
                 
-                <textarea id="userMessage" rows="4" placeholder="Your Message *"></textarea>
-                <div class="error-message" id="messageError">❌ Please write your message</div>
+                <textarea id="userMessage" rows="4" placeholder="Your Message * (Max 200 characters total - spaces & letters all count)"></textarea>
+                <div class="message-counter" id="messageCounter">
+                    📝 <span class="char-count-display" id="charCount">0</span> / 200 characters
+                </div>
+                <div class="error-message" id="messageError">❌ Message cannot be empty and must be 200 characters or less (spaces count)</div>
                 
                 <button type="submit" class="btn-gold" style="width:100%"><i class="fas fa-paper-plane"></i> Send Enquiry</button>
             </form>
@@ -426,10 +456,8 @@
 
 <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
 <script>
-    // ========== EMAILJS INIT ==========
     emailjs.init("cxrzrWkbM8L_IeXOR");
 
-    // ========== ANTI THEFT ==========
     document.addEventListener('contextmenu', e => e.preventDefault());
     document.addEventListener('keydown', e => {
         if (e.key === 'F12') { e.preventDefault(); }
@@ -461,7 +489,6 @@
         document.getElementById('navLinks').classList.toggle('show');
     }
 
-    // Dark/Light Mode
     const themeToggle = document.getElementById('themeToggle');
     themeToggle.addEventListener('click', () => {
         document.body.classList.toggle('light-mode');
@@ -475,31 +502,47 @@
         }
     });
 
-    // ========== VALIDATION FUNCTIONS ==========
-    function validateName(name) {
-        const nameRegex = /^[A-Za-z]{2,}$/;
-        return nameRegex.test(name.trim());
+    // ========== 200 CHARACTER LIMIT VALIDATION (EVERY CHARACTER COUNTS: LETTERS, SPACES, SYMBOLS, NUMBERS) ==========
+    function validateName(name) { return /^[A-Za-z]{2,}$/.test(name.trim()); }
+    function validateEmail(email) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()); }
+    function validatePhone(phone) { return /^\d{10}$/.test(phone.trim()); }
+    function validateMessage(message) { 
+        const len = message.length;  // counts EVERY character including spaces, letters, numbers, symbols
+        return len > 0 && len <= 200; 
     }
+    function validateInterest(interest) { return interest && interest !== "" && interest !== "I'm interested in..."; }
 
-    function validateEmail(email) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return emailRegex.test(email.trim());
+    const messageField = document.getElementById('userMessage');
+    const charCountSpan = document.getElementById('charCount');
+    
+    function updateCharCounter() {
+        let len = messageField.value.length;
+        charCountSpan.innerText = len;
+        const counterSpan = charCountSpan;
+        const parentDiv = document.getElementById('messageCounter');
+        
+        if (len > 200) {
+            messageField.classList.add('error');
+            counterSpan.classList.remove('normal-limit', 'warning-limit');
+            counterSpan.classList.add('danger-limit');
+            if(parentDiv) parentDiv.style.color = "#ff4444";
+        } else {
+            if (messageField.classList.contains('error') && len <= 200) messageField.classList.remove('error');
+            if (len >= 180) {
+                counterSpan.classList.remove('normal-limit', 'danger-limit');
+                counterSpan.classList.add('warning-limit');
+                if(parentDiv) parentDiv.style.color = "#ffaa44";
+            } else {
+                counterSpan.classList.remove('warning-limit', 'danger-limit');
+                counterSpan.classList.add('normal-limit');
+                if(parentDiv) parentDiv.style.color = "#aaa";
+            }
+        }
     }
+    messageField.addEventListener('input', updateCharCounter);
+    updateCharCounter();
 
-    function validatePhone(phone) {
-        const phoneRegex = /^\d{10}$/;
-        return phoneRegex.test(phone.trim());
-    }
-
-    function validateMessage(message) {
-        return message.trim().length > 0;
-    }
-
-    function validateInterest(interest) {
-        return interest !== null && interest !== "" && interest !== "I'm interested in...";
-    }
-
-    function showFieldError(fieldId, errorId, isValid, errorMessage) {
+    function showFieldError(fieldId, errorId, isValid) {
         const field = document.getElementById(fieldId);
         const error = document.getElementById(errorId);
         if (!isValid) {
@@ -511,17 +554,14 @@
         }
     }
 
-    // ========== CONTACT FORM SUBMIT WITH VALIDATION ==========
     const enquiryForm = document.getElementById('enquiryForm');
-    
     enquiryForm.addEventListener('submit', function(e) {
         e.preventDefault();
-        
         const name = document.getElementById('userName').value;
         const email = document.getElementById('userEmail').value;
         const phone = document.getElementById('userPhone').value;
         const interest = document.getElementById('userInterest').value;
-        const message = document.getElementById('userMessage').value;
+        const message = messageField.value;
         
         const isNameValid = validateName(name);
         const isEmailValid = validateEmail(email);
@@ -529,15 +569,13 @@
         const isInterestValid = validateInterest(interest);
         const isMessageValid = validateMessage(message);
         
-        showFieldError('userName', 'nameError', isNameValid, '');
-        showFieldError('userEmail', 'emailError', isEmailValid, '');
-        showFieldError('userPhone', 'phoneError', isPhoneValid, '');
-        showFieldError('userInterest', 'interestError', isInterestValid, '');
-        showFieldError('userMessage', 'messageError', isMessageValid, '');
+        showFieldError('userName', 'nameError', isNameValid);
+        showFieldError('userEmail', 'emailError', isEmailValid);
+        showFieldError('userPhone', 'phoneError', isPhoneValid);
+        showFieldError('userInterest', 'interestError', isInterestValid);
+        showFieldError('userMessage', 'messageError', isMessageValid);
         
-        if (!isNameValid || !isEmailValid || !isPhoneValid || !isInterestValid || !isMessageValid) {
-            return;
-        }
+        if (!isNameValid || !isEmailValid || !isPhoneValid || !isInterestValid || !isMessageValid) return;
         
         const submitBtn = enquiryForm.querySelector('button[type="submit"]');
         const originalText = submitBtn.innerHTML;
@@ -555,39 +593,16 @@
         };
         
         emailjs.send('service_9sut952', 'template_adproperties', templateParams)
-            .then(function(response) {
-                console.log('Email sent!', response);
-                enquiryForm.reset();
-                showPopup();
-            })
-            .catch(function(error) {
-                console.error('Email failed:', error);
-                alert('⚠️ Email failed. Please WhatsApp us directly at +91 78376 29125');
-            })
-            .finally(function() {
-                submitBtn.innerHTML = originalText;
-                submitBtn.disabled = false;
-            });
+            .then(() => { enquiryForm.reset(); updateCharCounter(); showPopup(); })
+            .catch(() => alert('⚠️ Email failed. Please WhatsApp us directly at +91 78376 29125'))
+            .finally(() => { submitBtn.innerHTML = originalText; submitBtn.disabled = false; });
     });
 
-    // Real-time validation on input
-    document.getElementById('userName').addEventListener('input', function() {
-        validateName(this.value) ? this.classList.remove('error') : this.classList.add('error');
-    });
-    document.getElementById('userEmail').addEventListener('input', function() {
-        validateEmail(this.value) ? this.classList.remove('error') : this.classList.add('error');
-    });
-    document.getElementById('userPhone').addEventListener('input', function() {
-        validatePhone(this.value) ? this.classList.remove('error') : this.classList.add('error');
-    });
-    document.getElementById('userInterest').addEventListener('change', function() {
-        validateInterest(this.value) ? this.classList.remove('error') : this.classList.add('error');
-    });
-    document.getElementById('userMessage').addEventListener('input', function() {
-        validateMessage(this.value) ? this.classList.remove('error') : this.classList.add('error');
-    });
-
-    // Properties Data
+    document.getElementById('userName').addEventListener('input', function() { validateName(this.value) ? this.classList.remove('error') : this.classList.add('error'); });
+    document.getElementById('userEmail').addEventListener('input', function() { validateEmail(this.value) ? this.classList.remove('error') : this.classList.add('error'); });
+    document.getElementById('userPhone').addEventListener('input', function() { validatePhone(this.value) ? this.classList.remove('error') : this.classList.add('error'); });
+    document.getElementById('userInterest').addEventListener('change', function() { validateInterest(this.value) ? this.classList.remove('error') : this.classList.add('error'); });
+    
     const properties = [
         { name: "The Sky Arc Residences", location: "Gurgaon, Sector 62", desc: "Luxury 4 BHK penthouses with panoramic views, infinity pool", price: "₹4.2 Cr", features: ["4 BHK", "3 Parking", "Pool"], category: "residential", badge: "🔥 Hot Deal", icon: "fas fa-home" },
         { name: "Elysian Gardens", location: "South Delhi", desc: "3 BHK premium apartments with smart home automation", price: "₹3.8 Cr", features: ["3 BHK", "Garden View", "Gym"], category: "residential", badge: "✨ Luxury", icon: "fas fa-building" },
@@ -629,7 +644,6 @@
         });
     });
 
-    // Particles
     function createParticles() {
         const container = document.getElementById('particles');
         for (let i = 0; i < 50; i++) {
